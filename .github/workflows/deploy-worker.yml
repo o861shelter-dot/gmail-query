@@ -1,0 +1,39 @@
+name: Deploy Cloudflare Worker
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deploy target'
+        type: choice
+        options: [worker, both]
+        default: worker
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_KEY: ${{ secrets.CF_API_KEY }}
+      CLOUDFLARE_EMAIL: ${{ secrets.CF_EMAIL }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Put runtime secrets
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          RTDB_URL: ${{ secrets.RTDB_URL }}
+          RTDB_SECRET: ${{ secrets.RTDB_SECRET }}
+          RTDB_TOKEN_PATH: ${{ secrets.RTDB_TOKEN_PATH }}
+          API_KEY: ${{ secrets.API_KEY }}
+        run: |
+          for K in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET RTDB_URL RTDB_SECRET RTDB_TOKEN_PATH API_KEY; do
+            printf '%s' "${!K}" | npx wrangler secret put "$K"
+          done
+      - name: Deploy
+        run: npx wrangler deploy

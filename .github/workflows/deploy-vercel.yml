@@ -1,0 +1,36 @@
+name: Deploy Vercel
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deploy target'
+        type: choice
+        options: [vercel, both]
+        default: vercel
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Push runtime env to Vercel
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          RTDB_URL: ${{ secrets.RTDB_URL }}
+          RTDB_SECRET: ${{ secrets.RTDB_SECRET }}
+          RTDB_TOKEN_PATH: ${{ secrets.RTDB_TOKEN_PATH }}
+          API_KEY: ${{ secrets.API_KEY }}
+        run: node scripts/push-vercel-env.mjs
+      - name: Deploy
+        run: npx vercel deploy --prod --yes --token=$VERCEL_TOKEN

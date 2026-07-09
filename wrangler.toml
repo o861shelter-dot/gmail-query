@@ -1,0 +1,9 @@
+name = "gmail-query-app"
+main = "src/worker.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# id sẽ được scripts/setup.mjs điền tự động
+[[kv_namespaces]]
+binding = "TOKEN_KV"
+id = "<filled-by-setup>"
