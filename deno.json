@@ -1,0 +1,11 @@
+{
+  "tasks": {
+    "build": "node scripts/build-bundle.mjs",
+    "start": "deno run --allow-net --allow-env --unstable-kv deno/main.ts"
+  },
+  "deploy": {
+    "project": "gmail-query",
+    "entrypoint": "deno/main.ts",
+    "include": ["dist/app.mjs", "deno/main.ts"]
+  }
+}

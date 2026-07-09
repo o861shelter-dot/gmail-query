@@ -4,9 +4,15 @@ import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 
-const RUNTIME = ['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','RTDB_URL','RTDB_SECRET','RTDB_TOKEN_PATH','API_KEY'];
-const VERCEL  = ['VERCEL_TOKEN','VERCEL_ORG_ID','VERCEL_PROJECT_ID'];
-const CF      = ['CF_API_KEY','CF_EMAIL','CF_ACCOUNT_ID'];
+const RUNTIME  = ['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','RTDB_URL','RTDB_SECRET','RTDB_TOKEN_PATH','API_KEY'];
+const GROUPS = {
+  vercel:   ['VERCEL_TOKEN','VERCEL_ORG_ID','VERCEL_PROJECT_ID'],
+  worker:   ['CF_API_KEY','CF_EMAIL','CF_ACCOUNT_ID'],
+  deno:     ['DENO_DEPLOY_TOKEN'],
+  netlify:  ['NETLIFY_AUTH_TOKEN','NETLIFY_SITE_ID'],
+  supabase: ['SUPABASE_ACCESS_TOKEN','SUPABASE_PROJECT_REF'],
+};
+const ALL = Object.keys(GROUPS);
 
 function loadEnv() {
   const out = {};
@@ -22,11 +28,12 @@ const mask = (v) => (v.length > 8 ? v.slice(0,4)+'\u2026'+v.slice(-2) : '\u2022\
 async function main() {
   const env = loadEnv();
   const rl = createInterface({ input: stdin, output: stdout });
-  const target = (await rl.question('Deploy target (vercel/worker/both) [both]: ')).trim() || 'both';
+  const raw = (await rl.question(`Deploy target(s) [${ALL.join(',')}] hoặc "all" [all]: `)).trim() || 'all';
+  const targets = raw === 'all' ? ALL : raw.split(/[\s,]+/).filter((t) => ALL.includes(t));
+  if (!targets.length) { console.error('Không có target hợp lệ.'); process.exit(1); }
 
   const keys = [...RUNTIME];
-  if (target === 'vercel' || target === 'both') keys.push(...VERCEL);
-  if (target === 'worker' || target === 'both') keys.push(...CF);
+  for (const t of targets) keys.push(...GROUPS[t]);
 
   const values = {};
   for (const k of keys) {
@@ -46,9 +53,9 @@ async function main() {
     console.log('  \u2713', k);
   }
 
-  if (target === 'worker' || target === 'both') {
+  if (targets.includes('worker')) {
     try {
-      console.log('\n\u2192 Tạo KV namespace TOKEN_KV...');
+      console.log('\n\u2192 Tạo KV namespace TOKEN_KV (Cloudflare)...');
       const out = sh('npx wrangler kv namespace create TOKEN_KV', {
         env: { ...process.env,
           CLOUDFLARE_API_KEY: values.CF_API_KEY,
@@ -57,12 +64,12 @@ async function main() {
       });
       const id = (out.match(/id\s*=\s*"([^"]+)"/) || [])[1];
       if (id) { patchWrangler(id); console.log('  \u2713 KV id', id); }
-      else console.log('  (không đọc được id tự động, kiểm tra output rồi điền tay vào wrangler.toml)');
+      else console.log('  (không đọc được id tự động, điền tay vào wrangler.toml)');
     } catch (e) {
       console.log('  (bỏ qua KV, có thể đã tồn tại):', e.message.split('\n')[0]);
     }
   }
-  console.log('\n\u2705 Setup xong. Push code hoặc chạy workflow trên GitHub để deploy.');
+  console.log(`\n\u2705 Setup xong cho: ${targets.join(', ')}. Push code hoặc chạy workflow để deploy.`);
 }
 
 function patchWrangler(id) {

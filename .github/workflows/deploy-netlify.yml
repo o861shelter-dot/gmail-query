@@ -1,0 +1,34 @@
+name: Deploy Netlify
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Build bundle
+        run: node scripts/build-bundle.mjs
+      - name: Set runtime env trên Netlify site
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          RTDB_URL: ${{ secrets.RTDB_URL }}
+          RTDB_SECRET: ${{ secrets.RTDB_SECRET }}
+          RTDB_TOKEN_PATH: ${{ secrets.RTDB_TOKEN_PATH }}
+          API_KEY: ${{ secrets.API_KEY }}
+        run: |
+          for K in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET RTDB_URL RTDB_SECRET RTDB_TOKEN_PATH API_KEY; do
+            npx netlify-cli env:set "$K" "${!K}" --site "$NETLIFY_SITE_ID" --force
+          done
+      - name: Deploy
+        run: npx netlify-cli deploy --prod --site "$NETLIFY_SITE_ID"

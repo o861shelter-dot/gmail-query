@@ -3,18 +3,23 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "build": "node scripts/build-bundle.mjs",
     "dev:worker": "wrangler dev",
     "dev:vercel": "vercel dev",
     "oauth": "node scripts/oauth.mjs",
     "setup": "node scripts/setup.mjs",
     "deploy:worker": "wrangler deploy",
-    "deploy:vercel": "vercel deploy --prod"
+    "deploy:vercel": "vercel deploy --prod",
+    "deploy:deno": "deno deploy --prod",
+    "deploy:netlify": "npm run build && npx netlify-cli deploy --prod",
+    "deploy:supabase": "npm run build && supabase functions deploy gmail --no-verify-jwt"
   },
   "dependencies": {
     "hono": "^4.6.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240909.0",
+    "esbuild": "^0.24.0",
     "typescript": "^5.6.0",
     "wrangler": "^3.80.0",
     "vercel": "^37.0.0"

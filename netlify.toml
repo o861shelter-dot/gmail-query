@@ -1,0 +1,7 @@
+[build]
+  command = "npm ci && node scripts/build-bundle.mjs"
+  publish = "public"
+
+[[edge_functions]]
+  path = "/*"
+  function = "api"

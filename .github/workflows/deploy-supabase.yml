@@ -1,0 +1,41 @@
+name: Deploy Supabase
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Build bundle
+        run: node scripts/build-bundle.mjs
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Set runtime secrets
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          RTDB_URL: ${{ secrets.RTDB_URL }}
+          RTDB_SECRET: ${{ secrets.RTDB_SECRET }}
+          RTDB_TOKEN_PATH: ${{ secrets.RTDB_TOKEN_PATH }}
+          API_KEY: ${{ secrets.API_KEY }}
+        run: |
+          supabase secrets set --project-ref "$PROJECT_REF" \
+            GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID" \
+            GOOGLE_CLIENT_SECRET="$GOOGLE_CLIENT_SECRET" \
+            RTDB_URL="$RTDB_URL" \
+            RTDB_SECRET="$RTDB_SECRET" \
+            RTDB_TOKEN_PATH="$RTDB_TOKEN_PATH" \
+            API_KEY="$API_KEY"
+      - name: Deploy function (tự xác thực bằng API_KEY nên tắt JWT verify)
+        run: supabase functions deploy gmail --project-ref "$PROJECT_REF" --no-verify-jwt

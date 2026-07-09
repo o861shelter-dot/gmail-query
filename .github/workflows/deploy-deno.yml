@@ -1,0 +1,29 @@
+name: Deploy Deno
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Build bundle
+        run: node scripts/build-bundle.mjs
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Deploy (Deno Deploy platform mới)
+        env:
+          DENO_DEPLOY_TOKEN: ${{ secrets.DENO_DEPLOY_TOKEN }}
+        # Cấu hình project/entrypoint nằm trong deno.json (mục "deploy").
+        # Nếu flag thay đổi theo phiên bản, chạy `deno deploy --help` để đối chiếu.
+        run: deno deploy --prod
